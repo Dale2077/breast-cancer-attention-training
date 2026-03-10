@@ -1,15 +1,16 @@
-# Breast Pathology Attention Benchmark
+# Breast cancer attention training
 
-基于 PyTorch 的乳腺癌病理图像二分类项目。  
-项目实现了 `CNN`、`ResNet` 及其注意力增强版本（`CNN_Attention`、`ResNet_Attention`）的统一训练与对比评估流程。
+A PyTorch-based project for binary classification of breast cancer pathological images.
+
+The project implements a unified training and comparative evaluation workflow for `CNN`, `ResNet`, and their attention-enhanced versions (`CNN_Attention`, `ResNet_Attention`).
 
 ## Features
 
-- 支持 4 种模型的一键训练与对比
-- 自定义注意力模块（1x1 Conv + BN + Sigmoid）
-- 自动保存模型权重（`.pth`）
-- 自动绘制训练/验证损失与准确率曲线
-- 自动汇总最优指标到 `best_metrics.csv`
+- Supports one-click training and comparison of 4 models
+- Custom attention module (1x1 Conv + BN + Sigmoid)
+- Automatically saves model weights (`.pth`)
+- Automatically plots training/validation loss and accuracy curves
+- Automatically summarizes best metrics to `best_metrics.csv`
 
 ## Project Structure
 
@@ -19,14 +20,14 @@
 ├── requirements.txt
 ├── .gitignore
 ├── LICENSE
-└── datasets/              # 本地数据目录，默认不纳入 Git
+└── datasets/
     ├── benign/
     └── malignant/
 ```
 
 ## Environment
 
-安装依赖：
+Install dependencies:
 
 ```bash
 pip install -r requirements.txt
@@ -34,7 +35,7 @@ pip install -r requirements.txt
 
 ## Quick Start
 
-1. 准备数据目录：
+1. Prepare the data directory:
 
 ```text
 datasets/
@@ -42,16 +43,16 @@ datasets/
   malignant/
 ```
 
-2. 运行训练：
+2. Run training:
 
 ```bash
 python main.py
 ```
 
-3. 训练完成后将生成：
-- 各模型权重：`*.pth`
-- 各模型训练曲线：`*_training.png`
-- 最优指标汇总：`best_metrics.csv`
+3. After training completes, the following will be generated:
+- Model weights for each model: `*.pth`
+- Training curves for each model: `*_training.png`
+- Summary of best metrics: `best_metrics.csv`
 
 ## Current Experiment Snapshot
 
@@ -64,5 +65,5 @@ python main.py
 
 ## Notes
 
-- 该项目当前使用简单 train/val 切分（`test_size=0.2`），未启用分层抽样与交叉验证。
-- 医学图像任务建议在更大规模数据集上进行外部验证，以避免过拟合导致的指标偏高。
+- This project currently uses a simple train/val split (`test_size=0.2`); stratified sampling and cross-validation are not enabled.
+- For medical image tasks, it is recommended to perform external validation on larger-scale datasets to avoid inflated metrics caused by overfitting.
