@@ -11,31 +11,31 @@ from tqdm import tqdm
 import csv
 
 # ===========================
-# 配置类
+# Configuration Class
 # ===========================
 class Config:
-    """训练过程的配置参数。"""
-    data_dir = os.path.join(os.path.dirname(__file__), "datasets")  # 数据集目录
-    batch_size = 32                      # 每批次的样本数量
-    num_workers = 4                      # 数据加载的子进程数量
+    """Configuration parameters for the training process."""
+    data_dir = os.path.join(os.path.dirname(__file__), "datasets")  # Dataset directory
+    batch_size = 32                      # Number of samples per batch
+    num_workers = 4                      # Number of subprocesses for data loading
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  
-    epochs = 50                          # 训练的总轮数
-    learning_rate = 0.001                # 优化器的学习率
-    weight_decay = 1e-4                  # 优化器的权重衰减（L2正则化）
-    num_classes = 2                      # 输出类别数量
-    input_size = 224                     # 输入图像的大小（高度和宽度）
+    epochs = 50                          # Total number of training epochs
+    learning_rate = 0.001                # Learning rate for the optimizer
+    weight_decay = 1e-4                  # Weight decay (L2 regularization) for the optimizer
+    num_classes = 2                      # Number of output classes
+    input_size = 224                     # Input image size (height and width)
 
 # ===========================
-# 自数据集类
+# Custom Dataset Class
 # ===========================
 class BreastCancerDataset(Dataset):
     """
-    乳腺癌图像的数据集类。
+    Dataset class for breast cancer images.
     
-    参数:
-        images (list): 图像文件路径列表。
-        labels (list): 对应的标签列表。
-        transform (callable, optional): 可选的图像变换。
+    Args:
+        images (list): List of image file paths.
+        labels (list): Corresponding label list.
+        transform (callable, optional): Optional image transformations.
     """
     def __init__(self, images, labels, transform=None):
         self.images = images
@@ -43,32 +43,32 @@ class BreastCancerDataset(Dataset):
         self.transform = transform
 
     def __len__(self):
-        """返回数据集的样本总数。"""
+        """Return the total number of samples in the dataset."""
         return len(self.images)
 
     def __getitem__(self, idx):
-        """获取指定索引的图像和标签。"""
+        """Get the image and label at the specified index."""
         img_path = self.images[idx]
         label = self.labels[idx]
         
-        # 打开图像并转换为RGB
+        # Open image and convert to RGB
         image = Image.open(img_path).convert('RGB')
         
-        # 如果有变换，则应用变换
+        # Apply transformations if provided
         if self.transform:
             image = self.transform(image)
             
         return image, label
 
 # ===========================
-# 注意力模块
+# Attention Module
 # ===========================
 class AttentionModule(nn.Module):
     """
-    简单的注意力模块，使用卷积层实现。
+    Simple attention module implemented using convolutional layers.
     
-    参数:
-        in_channels (int): 输入通道数。
+    Args:
+        in_channels (int): Number of input channels.
     """
     def __init__(self, in_channels):
         super(AttentionModule, self).__init__()
@@ -82,51 +82,51 @@ class AttentionModule(nn.Module):
         )
 
     def forward(self, x):
-        """将注意力权重应用于输入特征图。"""
+        """Apply attention weights to the input feature maps."""
         attention_weights = self.attention(x)
         return x * attention_weights
 
 # ===========================
-# CNN模型
+# CNN Model
 # ===========================
 class CNN(nn.Module):
     """
-    卷积神经网络模型。
+    Convolutional Neural Network model.
     
-    参数:
-        num_classes (int): 输出类别数。
-        use_attention (bool): 是否使用注意力模块。
+    Args:
+        num_classes (int): Number of output classes.
+        use_attention (bool): Whether to use the attention module.
     """
     def __init__(self, num_classes=2, use_attention=False):
         super(CNN, self).__init__()
         self.use_attention = use_attention
         
-        # 定义CNN的特征提取部分
+        # Define the feature extraction part of CNN
         self.features = nn.Sequential(
-            nn.Conv2d(3, 64, kernel_size=3, padding=1),  # 卷积层1
+            nn.Conv2d(3, 64, kernel_size=3, padding=1),  # Conv layer 1
             nn.ReLU(),
-            nn.MaxPool2d(2, 2),                          # 最大池化
-            nn.Conv2d(64, 128, kernel_size=3, padding=1),# 卷积层2
+            nn.MaxPool2d(2, 2),                          # Max pooling
+            nn.Conv2d(64, 128, kernel_size=3, padding=1),# Conv layer 2
             nn.ReLU(),
-            nn.MaxPool2d(2, 2),                          # 最大池化
-            nn.Conv2d(128, 256, kernel_size=3, padding=1),# 卷积层3
+            nn.MaxPool2d(2, 2),                          # Max pooling
+            nn.Conv2d(128, 256, kernel_size=3, padding=1),# Conv layer 3
             nn.ReLU(),
-            nn.MaxPool2d(2, 2)                           # 最大池化
+            nn.MaxPool2d(2, 2)                           # Max pooling
         )
         
-        # 可选的注意力模块
+        # Optional attention module
         if use_attention:
             self.attention = AttentionModule(256)
             
-        # 定义CNN的分类器部分
+        # Define the classifier part of CNN
         self.classifier = nn.Sequential(
-            nn.AdaptiveAvgPool2d((1, 1)),                # 自适应平均池化
-            nn.Flatten(),                                # 展平张量
-            nn.Linear(256, num_classes)                  # 全连接层
+            nn.AdaptiveAvgPool2d((1, 1)),                # Adaptive average pooling
+            nn.Flatten(),                                # Flatten tensor
+            nn.Linear(256, num_classes)                  # Fully connected layer
         )
 
     def forward(self, x):
-        """定义CNN的前向传播。"""
+        """Define the forward propagation of CNN."""
         x = self.features(x)
         if self.use_attention:
             x = self.attention(x)
@@ -134,88 +134,88 @@ class CNN(nn.Module):
         return x
 
 # ===========================
-# ResNet基础块
+# ResNet Basic Block
 # ===========================
 class ResBlock(nn.Module):
     """
-    ResNet的基础残差块。
+    Basic residual block for ResNet.
     
-    参数:
-        in_channels (int): 输入通道数。
-        out_channels (int): 输出通道数。
-        stride (int): 第一个卷积层的步幅。
+    Args:
+        in_channels (int): Number of input channels.
+        out_channels (int): Number of output channels.
+        stride (int): Stride of the first convolutional layer.
     """
     def __init__(self, in_channels, out_channels, stride=1):
         super(ResBlock, self).__init__()
-        # 第一个卷积层
+        # First convolutional layer
         self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=stride, padding=1)
         self.bn1 = nn.BatchNorm2d(out_channels)
-        # 第二个卷积层
+        # Second convolutional layer
         self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1)
         self.bn2 = nn.BatchNorm2d(out_channels)
         
-        # 快捷连接
+        # Shortcut connection
         self.shortcut = nn.Sequential()
         if stride != 1 or in_channels != out_channels:
-            # 如果维度变化，通过卷积匹配维度
+            # If dimensions change, match dimensions via convolution
             self.shortcut = nn.Sequential(
                 nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride),
                 nn.BatchNorm2d(out_channels)
             )
 
     def forward(self, x):
-        """定义残差块的前向传播。"""
+        """Define the forward propagation of the residual block."""
         out = torch.relu(self.bn1(self.conv1(x)))
         out = self.bn2(self.conv2(out))
-        out += self.shortcut(x)  # 添加快捷连接
+        out += self.shortcut(x)  # Add shortcut connection
         out = torch.relu(out)
         return out
 
 # ===========================
-# ResNet模型
+# ResNet Model
 # ===========================
 class ResNet(nn.Module):
     """
-    ResNet模型。
+    ResNet model.
     
-    参数:
-        num_classes (int): 输出类别数。
-        use_attention (bool): 是否使用注意力模块。
+    Args:
+        num_classes (int): Number of output classes.
+        use_attention (bool): Whether to use the attention module.
     """
     def __init__(self, num_classes=2, use_attention=False):
         super(ResNet, self).__init__()
         self.use_attention = use_attention
         
-        # 初始卷积层
+        # Initial convolutional layer
         self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3)
         self.bn1 = nn.BatchNorm2d(64)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         
-        # 残差层
-        self.layer1 = self.make_layer(64, 64, 2)      # 第一层
-        self.layer2 = self.make_layer(64, 128, 2, stride=2)  # 第二层
-        self.layer3 = self.make_layer(128, 256, 2, stride=2) # 第三层
+        # Residual layers
+        self.layer1 = self.make_layer(64, 64, 2)      # Layer 1
+        self.layer2 = self.make_layer(64, 128, 2, stride=2)  # Layer 2
+        self.layer3 = self.make_layer(128, 256, 2, stride=2) # Layer 3
         
-        # 可选的注意力模块
+        # Optional attention module
         if use_attention:
             self.attention = AttentionModule(256)
             
-        # 全局平均池化和全连接层
+        # Global average pooling and fully connected layer
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(256, num_classes)
 
     def make_layer(self, in_channels, out_channels, blocks, stride=1):
         """
-        多个残差块的层。
+        Create a layer consisting of multiple residual blocks.
         
-        参数:
-            in_channels (int): 输入通道数。
-            out_channels (int): 输出通道数。
-            blocks (int): 残差块的数量。
-            stride (int): 第一个残差块的步幅。
+        Args:
+            in_channels (int): Number of input channels.
+            out_channels (int): Number of output channels.
+            blocks (int): Number of residual blocks.
+            stride (int): Stride of the first residual block.
         
-        返回:
-            nn.Sequential: 由多个残差块组成的顺序容器。
+        Returns:
+            nn.Sequential: A sequential container composed of multiple residual blocks.
         """
         layers = []
         layers.append(ResBlock(in_channels, out_channels, stride))
@@ -224,7 +224,7 @@ class ResNet(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x):
-        """定义ResNet的前向传播。"""
+        """Define the forward propagation of ResNet."""
         x = torch.relu(self.bn1(self.conv1(x)))
         x = self.maxpool(x)
         
@@ -241,104 +241,105 @@ class ResNet(nn.Module):
         return x
 
 # ===========================
-# 训练函数
+# Training Function
 # ===========================
 def train_model(model, train_loader, val_loader, criterion, optimizer, num_epochs, device):
     """
-    训练并验证模型。
+    Train and validate the model.
     
-    参数:
-        model (nn.Module): 要训练的神经网络模型。
-        train_loader (DataLoader): 训练数据的DataLoader。
-        val_loader (DataLoader): 验证数据的DataLoader。
-        criterion (nn.Module): 损失函数。
-        optimizer (optim.Optimizer): 优化器。
-        num_epochs (int): 训练的轮数。
-        device (torch.device): 训练设备。
+    Args:
+        model (nn.Module): The neural network model to train.
+        train_loader (DataLoader): DataLoader for training data.
+        val_loader (DataLoader): DataLoader for validation data.
+        criterion (nn.Module): Loss function.
+        optimizer (optim.Optimizer): Optimizer.
+        num_epochs (int): Number of training epochs.
+        device (torch.device): Training device.
     
-    返回:
-        tuple: 训练损失列表，训练准确率列表，验证损失列表，验证准确率列表，最佳验证指标字典。
+    Returns:
+        tuple: Lists of training losses, training accuracies, validation losses, 
+               validation accuracies, and a dictionary of best validation metrics.
     """
     train_losses = []
     train_accs = []
     val_losses = []
     val_accs = []
     
-    # 跟踪最佳验证准确率
+    # Track best validation accuracy
     best_val_acc = 0.0
     best_metrics = {}
 
     for epoch in range(num_epochs):
         # ===========================
-        # 训练阶段
+        # Training Phase
         # ===========================
-        model.train()  # 设置模型为训练模式
+        model.train()  # Set model to training mode
         train_loss = 0.0
         correct = 0
         total = 0
         
-        # 训练进度条
+        # Training progress bar
         train_bar = tqdm(train_loader, desc=f'Epoch {epoch+1}/{num_epochs} [Train]')
         for images, labels in train_bar:
             images, labels = images.to(device), labels.to(device)
             
-            optimizer.zero_grad()            # 清除梯度
-            outputs = model(images)          # 前向传播
-            loss = criterion(outputs, labels)# 计算损失
+            optimizer.zero_grad()            # Clear gradients
+            outputs = model(images)          # Forward propagation
+            loss = criterion(outputs, labels)# Compute loss
             
-            loss.backward()                  # 反向传播
-            optimizer.step()                 # 更新参数
+            loss.backward()                  # Backward propagation
+            optimizer.step()                 # Update parameters
             
-            train_loss += loss.item()        # 累积损失
-            _, predicted = outputs.max(1)    # 获取预测类别
+            train_loss += loss.item()        # Accumulate loss
+            _, predicted = outputs.max(1)    # Get predicted class
             total += labels.size(0)
             correct += predicted.eq(labels).sum().item()
             
-            # 更新进度条显示的损失和准确率
+            # Update progress bar with loss and accuracy
             train_bar.set_postfix({
                 'Loss': f'{train_loss/len(train_loader):.4f}',
                 'Acc': f'{100.*correct/total:.2f}%'
             })
         
-        # 计算本轮的平均训练损失和准确率
+        # Calculate average training loss and accuracy for this epoch
         train_losses.append(train_loss / len(train_loader))
         train_accs.append(100. * correct / total)
         
         # ===========================
-        # 验证阶段
+        # Validation Phase
         # ===========================
-        model.eval()  # 设置模型为评估模式
+        model.eval()  # Set model to evaluation mode
         val_loss = 0.0
         correct = 0
         total = 0
         
-        with torch.no_grad():  # 禁用梯度计算
+        with torch.no_grad():  # Disable gradient computation
             val_bar = tqdm(val_loader, desc=f'Epoch {epoch+1}/{num_epochs} [Val]')
             for images, labels in val_bar:
                 images, labels = images.to(device), labels.to(device)
                 
-                outputs = model(images)          # 前向传播
-                loss = criterion(outputs, labels)# 计算损失
+                outputs = model(images)          # Forward propagation
+                loss = criterion(outputs, labels)# Compute loss
                 
-                val_loss += loss.item()          # 累积损失
-                _, predicted = outputs.max(1)    # 获取预测类别
+                val_loss += loss.item()          # Accumulate loss
+                _, predicted = outputs.max(1)    # Get predicted class
                 total += labels.size(0)
                 correct += predicted.eq(labels).sum().item()
                 
-                # 更新进度条显示的损失和准确率
+                # Update progress bar with loss and accuracy
                 val_bar.set_postfix({
                     'Loss': f'{val_loss/len(val_loader):.4f}',
                     'Acc': f'{100.*correct/total:.2f}%'
                 })
         
-        # 计算本轮的平均验证损失和准确率
+        # Calculate average validation loss and accuracy for this epoch
         val_losses.append(val_loss / len(val_loader))
         val_accs.append(100. * correct / total)
         
         # ===========================
-        # 记录最佳验证指标
+        # Record Best Validation Metrics
         # ===========================
-        # 如果当前验证准确率是最好的，则记录下来
+        # If current validation accuracy is the best, record it
         if val_accs[-1] > best_val_acc:
             best_val_acc = val_accs[-1]
             best_metrics = {
@@ -350,7 +351,7 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, num_epoch
             }
         
         # ===========================
-        # 打印本轮摘要
+        # Print Epoch Summary
         # ===========================
         print(f'Epoch {epoch+1}/{num_epochs}:')
         print(f'Train Loss: {train_losses[-1]:.4f}, Train Acc: {train_accs[-1]:.2f}%')
@@ -360,83 +361,83 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, num_epoch
     return train_losses, train_accs, val_losses, val_accs, best_metrics
 
 # ===========================
-# 绘图函数
+# Plotting Function
 # ===========================
 def plot_training(train_losses, train_accs, val_losses, val_accs, model_name):
     """
-    绘制训练和验证的损失与准确率曲线。
+    Plot training and validation loss and accuracy curves.
     
-    参数:
-        train_losses (list): 每轮的训练损失列表。
-        train_accs (list): 每轮的训练准确率列表。
-        val_losses (list): 每轮的验证损失列表。
-        val_accs (list): 每轮的验证准确率列表。
-        model_name (str): 模型名称（用于图表标题和保存文件名）。
+    Args:
+        train_losses (list): List of training losses per epoch.
+        train_accs (list): List of training accuracies per epoch.
+        val_losses (list): List of validation losses per epoch.
+        val_accs (list): List of validation accuracies per epoch.
+        model_name (str): Model name (used for chart title and saved filename).
     """
     plt.figure(figsize=(12, 4))
     
-    # 绘制损失曲线
+    # Plot loss curves
     plt.subplot(1, 2, 1)
-    plt.plot(train_losses, label='训练损失')
-    plt.plot(val_losses, label='验证损失')
-    plt.title(f'{model_name} - 损失')
-    plt.xlabel('轮数')
-    plt.ylabel('损失')
+    plt.plot(train_losses, label='Train Loss')
+    plt.plot(val_losses, label='Val Loss')
+    plt.title(f'{model_name} - Loss')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
     plt.legend()
     
-    # 绘制准确率曲线
+    # Plot accuracy curves
     plt.subplot(1, 2, 2)
-    plt.plot(train_accs, label='训练准确率')
-    plt.plot(val_accs, label='验证准确率')
-    plt.title(f'{model_name} - 准确率')
-    plt.xlabel('轮数')
-    plt.ylabel('准确率 (%)')
+    plt.plot(train_accs, label='Train Acc')
+    plt.plot(val_accs, label='Val Acc')
+    plt.title(f'{model_name} - Accuracy')
+    plt.xlabel('Epoch')
+    plt.ylabel('Accuracy (%)')
     plt.legend()
     
     plt.tight_layout()
-    plt.savefig(f'{model_name}_training.png')  # 保存为图片文件
+    plt.savefig(f'{model_name}_training.png')  # Save as image file
     plt.close()
 
 # ===========================
-# 主函数
+# Main Function
 # ===========================
 def main():
-    """主函数，执行训练流程。"""
+    """Main function to execute the training pipeline."""
     config = Config()
     
     # ===========================
-    # 数据预处理
+    # Data Preprocessing
     # ===========================
     transform = transforms.Compose([
-        transforms.Resize((config.input_size, config.input_size)),  # 调整图像大小
-        transforms.ToTensor(),                                     # 转换为张量
-        transforms.Normalize(mean=[0.485, 0.456, 0.406],          # 使用ImageNet的均值进行归一化
-                             std=[0.229, 0.224, 0.225])           # 使用ImageNet的标准差进行归一化
+        transforms.Resize((config.input_size, config.input_size)),  # Resize image
+        transforms.ToTensor(),                                     # Convert to tensor
+        transforms.Normalize(mean=[0.485, 0.456, 0.406],          # Normalize using ImageNet mean
+                             std=[0.229, 0.224, 0.225])           # Normalize using ImageNet std
     ])
     
     # ===========================
-    # 数据加载
+    # Data Loading
     # ===========================
     images = []
     labels = []
     for class_idx, class_name in enumerate(['benign', 'malignant']):
-        class_dir = os.path.join(config.data_dir, class_name)  # 类别目录路径
+        class_dir = os.path.join(config.data_dir, class_name)  # Class directory path
         for img_name in os.listdir(class_dir):
-            # 检查有效的图像文件扩展名
+            # Check for valid image file extensions
             if img_name.lower().endswith(('.png', '.jpg', '.jpeg', '.tif', '.bmp')):
-                images.append(os.path.join(class_dir, img_name))  # 添加图像路径
-                labels.append(class_idx)                          # 添加对应标签
+                images.append(os.path.join(class_dir, img_name))  # Add image path
+                labels.append(class_idx)                          # Add corresponding label
     
-    # 划分训练集和验证集
+    # Split into training and validation sets
     X_train, X_val, y_train, y_val = train_test_split(
         images, labels, test_size=0.2, random_state=42
     )
     
-    # 创建数据集
+    # Create datasets
     train_dataset = BreastCancerDataset(X_train, y_train, transform)
     val_dataset = BreastCancerDataset(X_val, y_val, transform)
     
-    # 创建DataLoader
+    # Create DataLoaders
     train_loader = DataLoader(
         train_dataset, batch_size=config.batch_size, shuffle=True, 
         num_workers=config.num_workers
@@ -447,7 +448,7 @@ def main():
     )
     
     # ===========================
-    # 模型初始化
+    # Model Initialization
     # ===========================
     models = {
         'CNN': CNN(config.num_classes, use_attention=False),
@@ -456,29 +457,29 @@ def main():
         'ResNet_Attention': ResNet(config.num_classes, use_attention=True)
     }
     
-    # 存储每个模型的最佳指标
+    # Store best metrics for each model
     all_best_metrics = []
     
     # ===========================
-    # 对每个模型进行训练
+    # Train Each Model
     # ===========================
     for model_name, model in models.items():
-        print(f'\n正在训练模型: {model_name}...')
+        print(f'\nTraining model: {model_name}...')
         model = model.to(config.device)                  
-        criterion = nn.CrossEntropyLoss()                # 定义损失函数
+        criterion = nn.CrossEntropyLoss()                # Define loss function
         optimizer = optim.Adam(
             model.parameters(), 
             lr=config.learning_rate, 
             weight_decay=config.weight_decay
-        )                                                 # 定义优化器
+        )                                                 # Define optimizer
         
-        # 训练模型
+        # Train the model
         train_losses, train_accs, val_losses, val_accs, best_metrics = train_model(
             model, train_loader, val_loader, criterion, optimizer, 
             config.epochs, config.device
         )
         
-        # 保存模型的状态字典
+        # Save model state dictionary
         torch.save(model.state_dict(), f'{model_name}.pth')
         
         plot_training(train_losses, train_accs, val_losses, val_accs, model_name)
@@ -487,7 +488,7 @@ def main():
         all_best_metrics.append(best_metrics)
     
     # ===========================
-    # 将最佳指标保存到CSV
+    # Save Best Metrics to CSV
     # ===========================
     csv_file = 'best_metrics.csv'
     csv_columns = ['Model', 'Epoch', 'Train Loss', 'Train Acc', 'Val Loss', 'Val Acc']
@@ -498,9 +499,9 @@ def main():
             writer.writeheader() 
             for data in all_best_metrics:
                 writer.writerow(data)  
-        print(f'\n所有模型的最佳指标已保存到 {csv_file}')
+        print(f'\nBest metrics for all models saved to {csv_file}')
     except IOError:
-        print("写入CSV文件时发生I/O错误")
+        print("I/O error occurred while writing to CSV file")
 
 
 if __name__ == '__main__':
